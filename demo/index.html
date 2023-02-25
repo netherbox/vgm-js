@@ -106,6 +106,8 @@
             source.loop = true;
 
             source.start();
+
+            audioCtx.suspend();
         })();
 
         var playButton = document.getElementById('play-button');
