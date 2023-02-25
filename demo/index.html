@@ -10,7 +10,6 @@
 
     <link href="https://fonts.googleapis.com/css?family=Fredoka+One" rel="stylesheet">
 
-    <script src="tune.js"></script>
     <script src="../vgm.js"></script>
     <script src="../ay8910.js"></script>
 
@@ -19,19 +18,47 @@
             font-family: 'Fredoka One', cursive;
             background-color: #333;
             color: #EEE;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 50px;
+            height: 100vh;
         }
         
         h1.title {
             font-weight: normal;
             font-size: 50px;
             text-shadow: 0.1em 0.1em 0 #000;
-            position: absolute;
-            top: 50%;
-            right: 0;
-            left: 0;
             text-align: center;
-            padding: 0;
-            margin: -80px 0 0 0;
+            margin: 0;
+        }
+
+        .button {
+            color: white;
+            padding: 10px 30px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 20px;
+            background-color: transparent;
+            border: 2px solid #b10000;
+            margin-top: 0px;
+            margin-bottom: 2px;
+            background-color: #960000;
+            box-shadow: 0 2px 0px 5px #5a0101;
+        }
+
+        .button:hover {
+            background-color: #b10000;
+        }
+
+        .button:active {
+            margin-top: 2px;
+            background-color: #b10000;
+            box-shadow: 0 0 0px 5px #5a0101;
+            margin-bottom: 0
         }
     </style>
 </head>
@@ -39,33 +66,63 @@
 <body>
     <h1 class="title">vgm-js demo</h1>
 
+    <button id="play-button" class="button" onclick="play()">PLAY</button>
+    <button id="pause-button" class="button" onclick="pause()" style="display: none">PAUSE</button>
+
     <script>
-        vgm = new Vgm(tuneData);
-
-        console.log('VGM ' + vgm.getVersion());
-        console.log('Data offset 0x' + vgm.getDataOffset().toString(16));
-        console.log('AY8910 clock ' + vgm.getAY8910Clock() + ' Hz');
-
-        chip = new AY8910(vgm.getAY8910Clock());
 
         var audioCtx = new(window.AudioContext || window.webkitAudioContext)();
 
-        console.log('audioCtx.sampleRate ' + audioCtx.sampleRate);
+        (async () => {
+            const response = await fetch('./tune.vgm');
 
-        var frameCount = vgm.getSamplesCount();
+            if (!response.ok) {
+                throw new Error(`HTTP error, status = ${response.status}`);
+            }
 
-        var myArrayBuffer = audioCtx.createBuffer(1, frameCount, vgm.sampleRate);
+            vgm = new Vgm(new Uint8Array(await response.arrayBuffer()));
 
-        var nowBuffering = myArrayBuffer.getChannelData(0);
+            console.log('VGM ' + vgm.getVersion());
+            console.log('Data offset 0x' + vgm.getDataOffset().toString(16));
+            console.log('AY8910 clock ' + vgm.getAY8910Clock() + ' Hz');
 
-        vgm.fillBuffer(nowBuffering, chip);
+            chip = new AY8910(vgm.getAY8910Clock());
 
-        var source = audioCtx.createBufferSource();
+            console.log('audioCtx.sampleRate ' + audioCtx.sampleRate);
 
-        source.buffer = myArrayBuffer;
-        source.connect(audioCtx.destination);
+            var frameCount = vgm.getSamplesCount();
 
-        source.start();
+            var myArrayBuffer = audioCtx.createBuffer(1, frameCount, vgm.sampleRate);
+
+            var nowBuffering = myArrayBuffer.getChannelData(0);
+
+            vgm.fillBuffer(nowBuffering, chip);
+
+            var source = audioCtx.createBufferSource();
+
+            source.buffer = myArrayBuffer;
+            source.connect(audioCtx.destination);
+
+            source.loop = true;
+
+            source.start();
+        })();
+
+        var playButton = document.getElementById('play-button');
+        var pauseButton = document.getElementById('pause-button');
+
+        function play() {
+            playButton.style.display = 'none';
+            pauseButton.style.display = 'block';
+            audioCtx.resume();
+        }
+
+        function pause() {
+            playButton.style.display = 'block';
+            pauseButton.style.display = 'none';
+            audioCtx.suspend();
+        }
+
     </script>
 </body>
 
